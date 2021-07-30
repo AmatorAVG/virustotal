@@ -136,17 +136,19 @@ def get_data_from_sites(path, vtkey, shkey, timer):
 
 
 def export_to_excel(path):
-    workbook = Workbook(path)
-    worksheet = workbook.add_worksheet()
-    conn = sqlite3.connect('sqlite.db')
-    c = conn.cursor()
-    mysel = c.execute("select * from Journal")
-    for i, row in enumerate(mysel):
-        for j, value in enumerate(row):
-            worksheet.write(i, j, value)
-    workbook.close()
-    print("Данные успешно экспортированы в файл ", path)
-
+    try:
+        workbook = Workbook(path)
+        worksheet = workbook.add_worksheet()
+        conn = sqlite3.connect('sqlite.db')
+        c = conn.cursor()
+        mysel = c.execute("select * from Journal")
+        for i, row in enumerate(mysel):
+            for j, value in enumerate(row):
+                worksheet.write(i, j, value)
+        workbook.close()
+        print("Данные успешно экспортированы в файл ", path)
+    except Exception as err:
+        print(err)
 
 # -------------------------------------
 # CREATE A DATABASE TO WORK WITH
@@ -166,18 +168,18 @@ CREATE TABLE Journal(
 # CREATE PYSIMPLEGUI LAYOUT
 # -------------------------
 # Define the columns for the table selector
-headings = ['id', 'Ресурс         ', 'Вредоносность (VT)', 'Уязвимости (SH)     ',
-            'Порты (SH)            ', 'Службы (SH)         ']
+headings = ['id', 'Ресурс         ', 'Вредоносность (VT)', 'Уязвимости (SH)    ',
+            'Порты (SH)          ', 'Службы (SH)     ']
 visible = [0, 1, 1, 1, 1, 1]
 layout = [
     [sg.Text('Путь к текстовому файлу со списком URL:', size=(35, 1), auto_size_text=False, justification='left'),
-        sg.InputText('URL.txt', size=(74, 1)), sg.FileBrowse(file_types=(("Text files", ".txt"),))],
+        sg.InputText('URL.txt', size=(64, 1)), sg.FileBrowse(file_types=(("Text files", ".txt"),))],
     [sg.Text('Virustotal API key:', size=(14, 1), auto_size_text=False, justification='left'),
-        sg.InputText('171f17576cb1926938882625cd97519bc40d47c9dab8fa842c869b7132bd9394', size=(65, 1))],
+        sg.InputText('', size=(65, 1))],
     [sg.Text('Shodan API key:', size=(14, 1), auto_size_text=False, justification='left'),
-        sg.InputText('mWeGtOq6iKA4tdKdQ5Py1mpczHdwYZui', size=(65, 1))],
+        sg.InputText('', size=(65, 1))],
     [sg.Text('Путь к файлу Excel:', size=(35, 1), auto_size_text=False, justification='left'),
-     sg.InputText('export.xlsx', size=(74, 1)), sg.FileBrowse(file_types=(("Excel files", "*.xlsx"),))],
+     sg.InputText('export.xlsx', size=(64, 1)), sg.FileBrowse(file_types=(("Excel files", "*.xlsx"),))],
 
     [sg.Text('Пауза между запросами, сек:', size=(25, 1), auto_size_text=False, justification='left'),
      sg.Slider(range=(0, 30), orientation='h', size=(34, 20), default_value=10, key='Timer')],
@@ -185,15 +187,15 @@ layout = [
     [sg.Button('Обновить данные с сайтов', key=f'btnRefresh', size=(22, 1)),
      sg.Button('Экспортировать в Excel', key=f'btnExport', size=(22, 1))],
 
-    ss.selector('sel_journal', 'Journal', sg.Table, num_rows=15, headings=headings, visible_column_map=visible),
+    ss.selector('sel_journal', 'Journal', sg.Table, num_rows=8, headings=headings, visible_column_map=visible),
 
     ss.actions('act_journal', 'Journal'),
-    ss.record('Journal.resource', size=(105, 1)),
+    ss.record('Journal.resource', size=(95, 1)),
     ss.record('Journal.vt_positives', size=(3, 1)),
-    ss.record('Journal.sh_vulnerabilities', size=(105, 1)),
-    ss.record('Journal.sh_ports', size=(105, 1)),
-    ss.record('Journal.sh_services', size=(105, 1)),
-    [sg.Output(size=(122, 8), key='-OUTPUT-')],
+    ss.record('Journal.sh_vulnerabilities', size=(95, 1)),
+    ss.record('Journal.sh_ports', size=(95, 1)),
+    ss.record('Journal.sh_services', size=(95, 1)),
+    [sg.Output(size=(112, 6), key='-OUTPUT-')],
 ]
 layout[5][0].VerticalScrollOnly = False
 win = sg.Window('Программа анализа вредоносности ресурсов', layout, finalize=True)
@@ -217,11 +219,14 @@ while True:
         db = None              # <= ensures proper closing of the sqlite database and runs a database optimization
         break
     elif event == 'btnRefresh':
-        delete_db('sqlite.db')
-        b = ss.Database('sqlite.db', win)
-        get_data_from_sites(values[0], values[1], values[2], int(values['Timer']))
-        db = ss.Database('sqlite.db', win)
-        print("Обработка завершена.")
+        try:
+            delete_db('sqlite.db')
+            b = ss.Database('sqlite.db', win)
+            get_data_from_sites(values[0], values[1], values[2], int(values['Timer']))
+            db = ss.Database('sqlite.db', win)
+            print("Обработка завершена.")
+        except Exception as err:
+            print(err)
     elif event == 'btnExport':
         export_to_excel(values[3])
     else:
